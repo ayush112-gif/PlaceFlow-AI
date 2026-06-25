@@ -9,6 +9,7 @@ import { supabase } from "../lib/supabase";
 
 
 export default function Integrations() {
+
   const [brevoSenderName, setBrevoSenderName] = useState("");
 const [brevoSenderEmail, setBrevoSenderEmail] = useState("");
   const [loading, setLoading] = useState(true);
@@ -16,7 +17,7 @@ const [brevoSenderEmail, setBrevoSenderEmail] = useState("");
   const [statusMessages, setStatusMessages] = useState<Record<string, string>>({});
   const [validationStatus, setValidationStatus] = useState<Record<string, boolean>>({});
   const [providerLoading, setProviderLoading] = useState<Record<string, boolean>>({});
-  const [userId, setUserId] = useState<string>("");
+  
 
   // AI Providers
   const [openrouter, setOpenrouter] = useState("");
@@ -50,7 +51,7 @@ const [brevoSenderEmail, setBrevoSenderEmail] = useState("");
       );
     }
 
-    setUserId(user.id);
+  
 
     await loadIntegrations();
 
@@ -108,9 +109,7 @@ const [brevoSenderEmail, setBrevoSenderEmail] = useState("");
     return normalizeStatus(integration?.status) ? "Connected" : "Disconnected";
   }
 
-  function getProviderStatusColor(provider: string) {
-    return getProviderStatus(provider) === "Connected" ? "#10b981" : "#ef4444";
-  }
+  
 
   /**
    * Validate and save integration with user feedback
