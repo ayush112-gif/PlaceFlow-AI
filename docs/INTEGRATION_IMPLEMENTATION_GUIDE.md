@@ -69,7 +69,7 @@ Server running on port 5000
 ```bash
 # Get your OpenRouter API key from https://openrouter.ai/keys
 
-curl -X POST http://localhost:5000/api/integrations/validate \
+curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "test-user-123",
@@ -115,7 +115,7 @@ Expected response (Invalid):
 ```bash
 # Get your Gemini API key from https://makersuite.google.com/app/apikey
 
-curl -X POST http://localhost:5000/api/integrations/validate \
+curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "test-user-123",
@@ -131,7 +131,7 @@ curl -X POST http://localhost:5000/api/integrations/validate \
 ```bash
 # Get your Brevo API key from https://app.brevo.com/settings/account/api
 
-curl -X POST http://localhost:5000/api/integrations/validate \
+curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "test-user-123",
@@ -146,7 +146,7 @@ curl -X POST http://localhost:5000/api/integrations/validate \
 
 ```bash
 # Test with Gmail
-curl -X POST http://localhost:5000/api/integrations/validate \
+curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "test-user-123",
@@ -170,13 +170,13 @@ For Gmail, use an App Password:
 ### 6. Get All Integrations
 
 ```bash
-curl http://localhost:5000/api/integrations/test-user-123
+curl https://placeflow-ai.onrender.com//api/integrations/test-user-123
 ```
 
 ### 7. Delete an Integration
 
 ```bash
-curl -X DELETE http://localhost:5000/api/integrations/test-user-123/openrouter
+curl -X DELETE https://placeflow-ai.onrender.com//api/integrations/test-user-123/openrouter
 ```
 
 ---

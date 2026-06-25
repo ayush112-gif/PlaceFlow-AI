@@ -16,7 +16,7 @@ export async function saveDraft(
   }
 
   const res = await axios.post(
-    "http://localhost:5000/api/draft-storage/save",
+    "https://placeflow-ai.onrender.com//api/draft-storage/save",
     {
       ...payload,
       user_id: user.id
@@ -39,7 +39,7 @@ export async function getDrafts() {
   }
 
   const res = await axios.get(
-    "http://localhost:5000/api/draft-storage",
+    "https://placeflow-ai.onrender.com//api/draft-storage",
     {
       params: {
         user_id: user.id

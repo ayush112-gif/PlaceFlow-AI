@@ -14,7 +14,7 @@ Validates provider credentials and automatically saves the result to the databas
 
 **Request:**
 ```bash
-curl -X POST http://localhost:5000/api/integrations/validate \
+curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "374cebeb-51d6-4e2e-89c4-147ad4fe1781",
@@ -85,7 +85,7 @@ curl -X POST http://localhost:5000/api/integrations/validate \
 
 **Example:**
 ```bash
-curl -X POST http://localhost:5000/api/integrations/validate \
+curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "user-id",
@@ -119,7 +119,7 @@ curl -X POST http://localhost:5000/api/integrations/validate \
 
 **Example:**
 ```bash
-curl -X POST http://localhost:5000/api/integrations/validate \
+curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "user-id",
@@ -153,7 +153,7 @@ curl -X POST http://localhost:5000/api/integrations/validate \
 
 **Example:**
 ```bash
-curl -X POST http://localhost:5000/api/integrations/validate \
+curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "user-id",
@@ -189,7 +189,7 @@ curl -X POST http://localhost:5000/api/integrations/validate \
 
 **Example:**
 ```bash
-curl -X POST http://localhost:5000/api/integrations/validate \
+curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "user-id",
@@ -243,7 +243,7 @@ Fetches all integrations for a user.
 
 **Request:**
 ```bash
-curl http://localhost:5000/api/integrations/user-id
+curl https://placeflow-ai.onrender.com//api/integrations/user-id
 ```
 
 **Response:**
@@ -285,7 +285,7 @@ Deletes a specific integration.
 
 **Request:**
 ```bash
-curl -X DELETE http://localhost:5000/api/integrations/user-id/openrouter
+curl -X DELETE https://placeflow-ai.onrender.com//api/integrations/user-id/openrouter
 ```
 
 **Response:**

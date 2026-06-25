@@ -16,7 +16,7 @@ export async function generateDrafts(
 
   const response =
     await axios.post(
-      "http://localhost:5000/api/drafts/generate",
+      "https://placeflow-ai.onrender.com//api/drafts/generate",
       {
         ...payload,
         userId: user.id,

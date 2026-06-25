@@ -7,7 +7,7 @@ sendEmail(
 
  const res =
  await axios.post(
-  "http://localhost:5000/api/email/send",
+  "https://placeflow-ai.onrender.com//api/email/send",
   payload
  );
 

@@ -12,10 +12,10 @@ require("./routes/integration.routes");
 const studentRoutes =
 require("./routes/student.routes");
 const noticeRoutes = require("./routes/notice.routes");
-
+const cors = require("cors");
 const app = express();
 app.use(express.json());
-
+app.use(cors());
 app.use(cors());
 
 console.log("Registering routes...");

@@ -5,7 +5,7 @@ getStudents(userId:string){
 
   const res =
   await axios.get(
-    `http://localhost:5000/api/students/${userId}`
+    `https://placeflow-ai.onrender.com//api/students/${userId}`
   );
 
   return res.data;
@@ -16,7 +16,7 @@ addStudent(payload:any){
 
   const res =
   await axios.post(
-    "http://localhost:5000/api/students/add",
+    "https://placeflow-ai.onrender.com//api/students/add",
     payload
   );
 
