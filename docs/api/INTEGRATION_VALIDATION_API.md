@@ -14,7 +14,7 @@ Validates provider credentials and automatically saves the result to the databas
 
 **Request:**
 ```bash
-curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
+curl -X POST https://placeflow-ai.onrender.com/api/integrations/validate \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "374cebeb-51d6-4e2e-89c4-147ad4fe1781",
@@ -85,7 +85,7 @@ curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
 
 **Example:**
 ```bash
-curl -X POST https://placeflow-ai.onrender.com//api/integrations/validate \
+curl -X POST https://placeflow-ai.onrender.com/api/integrations/validate \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "user-id",
