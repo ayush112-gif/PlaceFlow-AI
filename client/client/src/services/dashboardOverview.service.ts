@@ -21,7 +21,7 @@ export async function getDashboardOverview() {
     console.log("Fetching dashboard for user:", user.id);
     
     const res = await axios.get(
-      `https://placeflow-ai.onrender.com//api/dashboard/overview/${user.id}`,
+      `https://placeflow-ai.onrender.com/api/dashboard/overview/${user.id}`,
       { timeout: 5000 }
     );
 
