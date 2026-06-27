@@ -4,7 +4,7 @@ import DashboardLayout from "../layouts/DashboardLayout";
 import { supabase } from "../lib/supabase";
 
 const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || "https://placeflow-ai.onrender.com/";
+  import.meta.env.VITE_API_BASE_URL || "https://placeflow-ai.onrender.com";
 
 const DEFAULT_TEMPLATE = `
 <!DOCTYPE html>
