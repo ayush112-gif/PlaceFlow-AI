@@ -9,7 +9,7 @@ export async function analyzeNotice(
   } = await supabase.auth.getUser();
 
   const response = await fetch(
-    "https://placeflow-ai.onrender.com//api/notice/analyze",
+    "https://placeflow-ai.onrender.com/api/notice/analyze",
     {
       method: "POST",
       headers: {
