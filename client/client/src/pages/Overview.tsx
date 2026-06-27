@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { signOut } from "../services/auth.service";
@@ -20,220 +20,299 @@ interface DashboardData {
 
 const INTEGRATIONS_META = [
   { key: "openrouter", name: "OpenRouter", icon: "🔁" },
-  { key: "gemini",    name: "Gemini",    icon: "✦" },
-  { key: "smtp",      name: "SMTP",      icon: "📬" },
-  { key: "brevo",     name: "Brevo",     icon: "📡" },
+  { key: "gemini",     name: "Gemini",     icon: "✦"  },
+  { key: "smtp",       name: "SMTP",       icon: "📬" },
+  { key: "brevo",      name: "Brevo",      icon: "📡" },
 ];
 
 const QUICK_ACTIONS = [
-  { icon: "🔍", label: "Analyze",  desc: "Notices",       path: "/notice-analyzer" },
-  { icon: "✏️",  label: "Drafts",   desc: "Create & manage", path: "/drafts" },
-  { icon: "🎓", label: "Students", desc: "View all",      path: "/students" },
-  { icon: "📊", label: "Logs",     desc: "Email activity", path: "/logs" },
-  { icon: "🔌", label: "APIs",     desc: "Connect",       path: "/integrations" },
+  { icon: "🔍", label: "Analyze",  desc: "Notices",         path: "/notice-analyzer" },
+  { icon: "✏️",  label: "Drafts",   desc: "Create & manage", path: "/drafts"          },
+  { icon: "🎓", label: "Students", desc: "View all",        path: "/students"        },
+  { icon: "📊", label: "Logs",     desc: "Email activity",  path: "/logs"            },
+  { icon: "🔌", label: "APIs",     desc: "Connect",         path: "/integrations"    },
 ];
 
-const s: Record<string, React.CSSProperties> = {
-  /* ── layout ── */
-  page: {
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    maxWidth: 900,
-  },
-  topBar: {
-    height: 3,
-    borderRadius: 2,
-    background: "linear-gradient(90deg,#6366f1 0%,#8b5cf6 35%,#06b6d4 65%,#10b981 100%)",
-    marginBottom: 28,
-  },
+/* ── Pop-up overlay container ── */
+function PopCard({
+  open, onClose, title, children, anchorRef,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
 
-  /* ── header ── */
-  header: {
-    display: "flex", justifyContent: "space-between",
-    alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 28,
-  },
-  h1: {
-    fontSize: 24, fontWeight: 800, margin: 0,
-    letterSpacing: "-0.5px", color: "#111827",
-  },
-  subtitle: { fontSize: 13, color: "#9ca3af", marginTop: 3, fontWeight: 400 },
-  headerRight: { display: "flex", alignItems: "center", gap: 10 },
+  useEffect(() => {
+    if (open && anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect();
+      const scrollY = window.scrollY;
+      const winW = window.innerWidth;
+      const popW = 280;
+      let left = rect.left;
+      if (left + popW > winW - 16) left = winW - popW - 16;
+      setPos({ top: rect.bottom + scrollY + 6, left });
+    }
+  }, [open]);
 
-  /* ── status pill ── */
-  pillOperational: {
-    display: "flex", alignItems: "center", gap: 6,
-    padding: "5px 12px", borderRadius: 20,
-    background: "#ecfdf5", color: "#065f46",
-    fontSize: 12, fontWeight: 600, letterSpacing: "0.3px",
-  },
-  pillWarning: {
-    display: "flex", alignItems: "center", gap: 6,
-    padding: "5px 12px", borderRadius: 20,
-    background: "#fef3c7", color: "#92400e",
-    fontSize: 12, fontWeight: 600, letterSpacing: "0.3px",
-  },
-  statusDot: { width: 7, height: 7, borderRadius: "50%" },
+  useEffect(() => {
+    if (!open) return;
+    function handle(e: MouseEvent) {
+      if (
+        popRef.current && !popRef.current.contains(e.target as Node) &&
+        anchorRef.current && !anchorRef.current.contains(e.target as Node)
+      ) onClose();
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
 
-  /* ── buttons ── */
-  btnLogout: {
-    padding: "7px 14px", borderRadius: 8,
-    border: "1px solid #e5e7eb", background: "#fff",
-    color: "#ef4444", fontSize: 13, fontWeight: 500, cursor: "pointer",
-    display: "flex", alignItems: "center", gap: 5,
-  },
-  btnManage: {
-    width: "100%", marginTop: 12, padding: "9px 0",
-    borderRadius: 8, border: "1px solid #6366f1",
-    background: "transparent", color: "#6366f1",
-    fontSize: 12, fontWeight: 600, cursor: "pointer",
-  },
+  if (!open) return null;
+  return (
+    <div
+      ref={popRef}
+      style={{
+        position: "fixed",
+        top: pos.top,
+        left: pos.left,
+        width: 280,
+        background: "#1E293B",
+        border: "1px solid #334155",
+        borderRadius: 14,
+        boxShadow: "0 20px 48px rgba(0,0,0,0.55), 0 4px 12px rgba(99,102,241,0.15)",
+        zIndex: 999,
+        animation: "popIn 0.18s cubic-bezier(0.34,1.56,0.64,1)",
+        overflow: "hidden",
+      }}
+    >
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "11px 14px 10px",
+        borderBottom: "1px solid #334155",
+        background: "#172033",
+      }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#CBD5E1", letterSpacing: "0.02em" }}>{title}</span>
+        <button
+          onClick={onClose}
+          style={{
+            background: "none", border: "none", color: "#475569",
+            cursor: "pointer", fontSize: 16, lineHeight: 1, padding: "0 2px",
+          }}
+        >×</button>
+      </div>
+      <div style={{ padding: "10px 14px 14px" }}>{children}</div>
+    </div>
+  );
+}
 
-  /* ── section label ── */
-  sectionLabel: {
-    fontSize: 11, fontWeight: 700, letterSpacing: "0.8px",
-    textTransform: "uppercase" as const, color: "#9ca3af", marginBottom: 10,
-  },
+/* ── Compact KPI card with pop-up ── */
+function KpiCard({
+  label, sub, value, icon, accent, popTitle, popContent, delay,
+}: {
+  label: string; sub: string; value: number; icon: string; accent: string;
+  popTitle: string; popContent: React.ReactNode; delay: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-  /* ── kpi grid ── */
-  kpiGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-    gap: 10, marginBottom: 20,
-  },
-  kpiCard: {
-    background: "#fff", border: "1px solid #e5e7eb",
-    borderRadius: 12, padding: 16, position: "relative" as const,
-    overflow: "hidden", transition: "all 0.15s ease",
-  },
-  kpiAccent: {
-    position: "absolute" as const, top: 0, left: 0, right: 0,
-    height: 2, borderRadius: "2px 2px 0 0",
-  },
-  kpiIcon:  { fontSize: 18, marginBottom: 10 },
-  kpiLabel: { fontSize: 11, color: "#6b7280", fontWeight: 500, marginBottom: 1 },
-  kpiSub:   { fontSize: 10, color: "#d1d5db", marginBottom: 6 },
-  kpiVal:   {
-    fontSize: 30, fontWeight: 800, letterSpacing: "-1px", color: "#111827",
-  },
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), delay);
+    return () => clearTimeout(t);
+  }, []);
 
-  /* ── two-col ── */
-  twoCol: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1.4fr",
-    gap: 14, marginBottom: 20,
-  },
+  return (
+    <>
+      <div
+        ref={ref}
+        onClick={() => setOpen(o => !o)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          position: "relative",
+          background: open ? "#1E293B" : hovered ? "#1A2740" : "#172033",
+          border: `1px solid ${open || hovered ? accent + "55" : "#1E2A40"}`,
+          borderRadius: 12,
+          padding: "12px 14px",
+          overflow: "hidden",
+          cursor: "pointer",
+          transition: "all 0.2s ease",
+          transform: visible ? (hovered || open ? "translateY(-3px)" : "translateY(0)") : "translateY(8px)",
+          opacity: visible ? 1 : 0,
+          boxShadow: hovered || open ? `0 8px 24px ${accent}22` : "none",
+          userSelect: "none",
+        }}
+      >
+        {/* top accent */}
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0, height: 2,
+          background: `linear-gradient(90deg, transparent, ${accent}, transparent)`,
+          opacity: hovered || open ? 1 : 0, transition: "opacity 0.2s",
+        }} />
+        {/* shimmer */}
+        <div style={{
+          position: "absolute", top: 0,
+          left: hovered ? "110%" : "-60%",
+          width: "50%", height: "100%",
+          background: `linear-gradient(105deg, transparent 40%, ${accent}14 50%, transparent 60%)`,
+          transition: hovered ? "left 0.5s ease" : "none",
+          pointerEvents: "none",
+        }} />
+        {/* glow orb */}
+        <div style={{
+          position: "absolute", top: -20, right: -20,
+          width: 60, height: 60, borderRadius: "50%",
+          background: accent + (hovered ? "20" : "0a"),
+          filter: "blur(16px)", transition: "background 0.3s",
+          pointerEvents: "none",
+        }} />
 
-  /* ── card ── */
-  card: {
-    background: "#fff", border: "1px solid #e5e7eb",
-    borderRadius: 12, padding: 18,
-  },
-  cardTitle: {
-    fontSize: 13, fontWeight: 700, color: "#111827",
-    marginBottom: 14, display: "flex",
-    justifyContent: "space-between", alignItems: "center",
-  },
-  cardTitleMeta: { fontSize: 11, color: "#9ca3af", fontWeight: 400 },
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ fontSize: 16 }}>{icon}</span>
+          <span style={{
+            fontSize: 9, fontWeight: 600, color: accent,
+            opacity: hovered || open ? 1 : 0,
+            transition: "opacity 0.2s",
+            letterSpacing: "0.05em",
+          }}>VIEW ▾</span>
+        </div>
+        <div style={{
+          fontSize: 26, fontWeight: 800, letterSpacing: "-1px",
+          color: hovered || open ? accent : "#E2E8F0",
+          transition: "color 0.2s", fontVariantNumeric: "tabular-nums",
+          lineHeight: 1, marginBottom: 4,
+        }}>
+          {value.toLocaleString()}
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#94A3B8" }}>{label}</div>
+        <div style={{ fontSize: 10, color: "#475569", marginTop: 1 }}>{sub}</div>
+      </div>
 
-  /* ── health ── */
-  healthScoreRow: { display: "flex", alignItems: "flex-end", gap: 4, marginBottom: 12 },
-  healthNum: {
-    fontSize: 38, fontWeight: 800, letterSpacing: "-1.5px",
-    color: "#6366f1", lineHeight: 1,
-  },
-  healthPct: { fontSize: 16, fontWeight: 600, color: "#9ca3af", marginBottom: 4 },
-  healthBarWrap: {
-    height: 6, borderRadius: 3, background: "#f3f4f6",
-    marginBottom: 16, overflow: "hidden",
-  },
-  healthBarFill: {
-    height: "100%", borderRadius: 3,
-    background: "linear-gradient(90deg,#6366f1,#10b981)",
-    transition: "width 0.6s ease",
-  },
+      <PopCard
+        open={open}
+        onClose={() => setOpen(false)}
+        title={popTitle}
+        anchorRef={ref}
+      >
+        {popContent}
+      </PopCard>
+    </>
+  );
+}
 
-  /* ── integration chips ── */
-  chip: {
-    display: "flex", alignItems: "center",
-    justifyContent: "space-between", gap: 8,
-    padding: "8px 10px", borderRadius: 8,
-    border: "1px solid #f3f4f6", background: "#f9fafb",
-    marginBottom: 7, fontSize: 12,
-  },
-  chipName:    { fontWeight: 500, color: "#374151", display: "flex", alignItems: "center", gap: 6 },
-  chipActive:  { fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 10, background: "#ecfdf5", color: "#065f46" },
-  chipOffline: { fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 10, background: "#f3f4f6", color: "#9ca3af", border: "1px solid #e5e7eb" },
+/* ── Compact action button ── */
+function ActionBtn({ icon, label, desc, onClick }: {
+  icon: string; label: string; desc: string; onClick: () => void;
+}) {
+  const [h, setH] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
+      style={{
+        background: h ? "#1E2D45" : "#172033",
+        border: `1px solid ${h ? "#6366F155" : "#1E2A40"}`,
+        borderRadius: 10,
+        padding: "10px 6px",
+        cursor: "pointer",
+        textAlign: "center",
+        transition: "all 0.18s ease",
+        transform: h ? "translateY(-2px)" : "translateY(0)",
+        boxShadow: h ? "0 6px 16px rgba(99,102,241,0.18)" : "none",
+      }}
+    >
+      <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
+      <div style={{ fontSize: 10, fontWeight: 700, color: h ? "#A5B4FC" : "#94A3B8", display: "block", transition: "color 0.18s" }}>{label}</div>
+      <div style={{ fontSize: 9, color: "#475569", marginTop: 1, display: "block" }}>{desc}</div>
+    </button>
+  );
+}
 
-  /* ── quick actions ── */
-  actionsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(88px, 1fr))",
-    gap: 8,
-  },
-  actionBtn: {
-    background: "#f9fafb", border: "1px solid #e5e7eb",
-    borderRadius: 8, padding: "14px 10px",
-    cursor: "pointer", textAlign: "center" as const,
-    transition: "all 0.15s ease",
-  },
-  actionIcon:  { fontSize: 20, marginBottom: 6 },
-  actionLabel: { fontSize: 11, fontWeight: 700, color: "#111827", display: "block" },
-  actionDesc:  { fontSize: 10, color: "#9ca3af", marginTop: 2, display: "block" },
+/* ── Integration chip ── */
+function IntChip({ name, icon, connected }: { name: string; icon: string; connected: boolean }) {
+  const [h, setH] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "7px 10px", borderRadius: 8,
+        background: h ? "#1E293B" : "transparent",
+        border: `1px solid ${h ? "#334155" : "#1E2A40"}`,
+        marginBottom: 5, transition: "all 0.15s",
+      }}
+    >
+      <span style={{ fontSize: 12, fontWeight: 500, color: "#CBD5E1", display: "flex", alignItems: "center", gap: 6 }}>
+        <span>{icon}</span>{name}
+      </span>
+      <span style={{
+        fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
+        background: connected ? "#052E16" : "#1C1917",
+        color: connected ? "#4ADE80" : "#57534E",
+        border: `1px solid ${connected ? "#14532D" : "#292524"}`,
+      }}>
+        {connected ? "● Live" : "○ Off"}
+      </span>
+    </div>
+  );
+}
 
-  /* ── table ── */
-  tableWrap: { overflowX: "auto" as const },
-  table: { width: "100%", borderCollapse: "collapse" as const, fontSize: 12 },
-  th: {
-    textAlign: "left" as const, fontSize: 10,
-    fontWeight: 700, letterSpacing: "0.5px",
-    textTransform: "uppercase" as const, color: "#9ca3af",
-    padding: "0 10px 10px",
-  },
-  td: { padding: 10, borderTop: "1px solid #f3f4f6", color: "#374151" },
+/* ── Log row ── */
+function LogRow({ log }: { log: DashboardData["recentLogs"][0] }) {
+  const [h, setH] = useState(false);
+  const stMap: Record<string, [string, string, string]> = {
+    success: ["#052E16", "#4ADE80", "#14532D"],
+    pending: ["#1C1400", "#FBBF24", "#292524"],
+    error:   ["#1C0A0A", "#F87171", "#7F1D1D"],
+  };
+  const [bg, color, border] = stMap[log.status] ?? stMap.error;
+  return (
+    <tr
+      onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
+      style={{ background: h ? "#1A2744" : "transparent", transition: "background 0.12s" }}
+    >
+      <td style={{ padding: "8px 12px", color: "#E2E8F0", fontWeight: 600, fontSize: 12, borderTop: "1px solid #1E293B" }}>{log.company}</td>
+      <td style={{ padding: "8px 12px", color: "#94A3B8", fontSize: 12, borderTop: "1px solid #1E293B" }}>{log.recipients_count.toLocaleString()}</td>
+      <td style={{ padding: "8px 12px", borderTop: "1px solid #1E293B" }}>
+        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: bg, color, border: `1px solid ${border}` }}>
+          {log.status.charAt(0).toUpperCase() + log.status.slice(1)}
+        </span>
+      </td>
+      <td style={{ padding: "8px 12px", color: "#475569", fontSize: 11, borderTop: "1px solid #1E293B" }}>
+        {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+      </td>
+    </tr>
+  );
+}
 
-  /* ── workspace summary ── */
-  wsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 10,
-  },
-  wsItem: {
-    background: "#f9fafb", borderRadius: 8,
-    padding: "14px 12px", textAlign: "center" as const,
-  },
-  wsNum:   { fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px", color: "#6366f1" },
-  wsLabel: { fontSize: 10, color: "#9ca3af", marginTop: 3, fontWeight: 500 },
-
-  /* ── empty state ── */
-  empty: { textAlign: "center" as const, padding: "32px 20px", color: "#9ca3af", fontSize: 13 },
-
-  /* ── loading ── */
-  loadingWrap: {
-    display: "flex", alignItems: "center", justifyContent: "center",
-    gap: 8, padding: "60px 20px", color: "#6b7280", fontSize: 14,
-  },
-  loadingDot: {
-    width: 8, height: 8, borderRadius: "50%",
-    background: "#6366f1", animation: "pulse 1.5s ease-in-out infinite",
-  },
-};
-
+/* ── Main ── */
 export default function Overview() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const healthRef = useRef<HTMLDivElement>(null);
+  
+  const logsRef = useRef<HTMLDivElement>(null);
+  const [healthOpen, setHealthOpen] = useState(false);
+  
+  const [logsOpen, setLogsOpen] = useState(false);
 
   useEffect(() => { loadDashboard(); }, []);
 
   async function loadDashboard() {
     try {
       setLoading(true);
-      const dashboardData = await getDashboardOverview();
-      setData(dashboardData || empty());
-    } catch {
-      setData(empty());
-    } finally {
-      setLoading(false);
-    }
+      const d = await getDashboardOverview();
+      setData(d || empty());
+    } catch { setData(empty()); }
+    finally { setLoading(false); }
   }
 
   function empty(): DashboardData {
@@ -242,7 +321,7 @@ export default function Overview() {
 
   async function handleLogout() {
     try { await signOut(); navigate("/"); }
-    catch (e) { console.error("Logout failed", e); }
+    catch (e) { console.error(e); }
   }
 
   const norm = (v: any) => v === true || v === "true";
@@ -250,43 +329,85 @@ export default function Overview() {
   const total = data?.integrations?.length ?? 0;
   const healthScore = total > 0 ? Math.round((connectedCount / total) * 100) : 0;
   const isOperational = connectedCount > 0;
-
   const getStatus = (key: string) =>
     data?.integrations?.some(i => i.provider?.toLowerCase() === key && norm(i.status)) ?? false;
 
-  const kpiAccents = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981"];
   const kpis = [
-    { label: "Students",  sub: "Registered", value: data?.students ?? 0,  icon: "🎓" },
-    { label: "Drafts",    sub: "Generated",  value: data?.drafts   ?? 0,  icon: "📝" },
-    { label: "Emails sent", sub: "Delivered", value: data?.emails  ?? 0,  icon: "📤" },
-    { label: "APIs",      sub: "Connected",  value: connectedCount,        icon: "🔌" },
+    {
+      label: "Students", sub: "Registered", value: data?.students ?? 0, icon: "🎓", accent: "#6366F1",
+      popTitle: "Students overview",
+      popContent: (
+        <div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: "#6366F1", fontVariantNumeric: "tabular-nums" }}>{data?.students ?? 0}</div>
+          <div style={{ fontSize: 11, color: "#64748B", marginBottom: 12 }}>Total registered students</div>
+          <button onClick={() => navigate("/students")} style={{
+            width: "100%", padding: "8px 0", borderRadius: 8,
+            background: "#6366F1", color: "#fff", border: "none",
+            fontSize: 12, fontWeight: 600, cursor: "pointer",
+          }}>Go to Students →</button>
+        </div>
+      ),
+    },
+    {
+      label: "Drafts", sub: "Generated", value: data?.drafts ?? 0, icon: "📝", accent: "#8B5CF6",
+      popTitle: "Drafts overview",
+      popContent: (
+        <div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: "#8B5CF6", fontVariantNumeric: "tabular-nums" }}>{data?.drafts ?? 0}</div>
+          <div style={{ fontSize: 11, color: "#64748B", marginBottom: 12 }}>Email drafts generated</div>
+          <button onClick={() => navigate("/drafts")} style={{
+            width: "100%", padding: "8px 0", borderRadius: 8,
+            background: "#8B5CF6", color: "#fff", border: "none",
+            fontSize: 12, fontWeight: 600, cursor: "pointer",
+          }}>Go to Drafts →</button>
+        </div>
+      ),
+    },
+    {
+      label: "Emails sent", sub: "Delivered", value: data?.emails ?? 0, icon: "📤", accent: "#06B6D4",
+      popTitle: "Email activity",
+      popContent: (
+        <div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: "#06B6D4", fontVariantNumeric: "tabular-nums" }}>{data?.emails ?? 0}</div>
+          <div style={{ fontSize: 11, color: "#64748B", marginBottom: 12 }}>Total emails delivered</div>
+          <button onClick={() => navigate("/logs")} style={{
+            width: "100%", padding: "8px 0", borderRadius: 8,
+            background: "#0891B2", color: "#fff", border: "none",
+            fontSize: 12, fontWeight: 600, cursor: "pointer",
+          }}>View logs →</button>
+        </div>
+      ),
+    },
+    {
+      label: "APIs", sub: "Connected", value: connectedCount, icon: "🔌", accent: "#10B981",
+      popTitle: "API integrations",
+      popContent: (
+        <div>
+          {INTEGRATIONS_META.map(({ key, name, icon }) => (
+            <IntChip key={key} name={name} icon={icon} connected={getStatus(key)} />
+          ))}
+          <button onClick={() => navigate("/integrations")} style={{
+            width: "100%", marginTop: 8, padding: "8px 0", borderRadius: 8,
+            background: "#059669", color: "#fff", border: "none",
+            fontSize: 12, fontWeight: 600, cursor: "pointer",
+          }}>Manage integrations →</button>
+        </div>
+      ),
+    },
   ];
-
-  const statusBadge = (status: string) => {
-    const map: Record<string, { bg: string; color: string }> = {
-      success: { bg: "#ecfdf5", color: "#065f46" },
-      pending: { bg: "#fef3c7", color: "#92400e" },
-      error:   { bg: "#fee2e2", color: "#991b1b" },
-    };
-    const st = map[status] ?? map.error;
-    return (
-      <span style={{
-        display: "inline-block", padding: "3px 8px", borderRadius: 6,
-        fontSize: 10, fontWeight: 700, letterSpacing: "0.3px",
-        background: st.bg, color: st.color,
-      }}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
 
   if (loading) {
     return (
       <DashboardLayout>
-        <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
-        <div style={s.loadingWrap}>
-          <div style={s.loadingDot} />
-          Loading dashboard…
+        <style>{`@keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}`}</style>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "60px 20px" }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              width: 7, height: 7, borderRadius: "50%", background: "#6366F1",
+              animation: `bounce 1.1s ease ${i * 0.15}s infinite`,
+            }} />
+          ))}
+          <span style={{ fontSize: 13, color: "#475569", marginLeft: 4 }}>Loading…</span>
         </div>
       </DashboardLayout>
     );
@@ -295,194 +416,322 @@ export default function Overview() {
   return (
     <DashboardLayout>
       <style>{`
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        @media (max-width: 600px) {
-          .two-col-grid { grid-template-columns: 1fr !important; }
-          .ws-grid      { grid-template-columns: repeat(2,1fr) !important; }
-        }
+        @keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
+        @keyframes popIn{from{opacity:0;transform:scale(0.92) translateY(-6px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
       `}</style>
 
-      <div style={s.page}>
+      <div style={{
+        fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif",
+        maxWidth: 900,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+      }}>
 
-        {/* ── gradient top bar ── */}
-        <div style={s.topBar} />
-
-        {/* ── header ── */}
-        <div style={s.header}>
-          <div>
-            <h1 style={s.h1}>Welcome back 👋</h1>
-            <p style={s.subtitle}>Placement Communication SaaS · Overview</p>
-          </div>
-          <div style={s.headerRight}>
-            <div style={isOperational ? s.pillOperational : s.pillWarning}>
-              <div style={{ ...s.statusDot, background: isOperational ? "#10b981" : "#f59e0b" }} />
-              {isOperational ? "Operational" : "Setup required"}
+        {/* ── Row 1: Header ── */}
+        <div style={{
+          display: "flex", justifyContent: "space-between",
+          alignItems: "center",
+          background: "#172033",
+          border: "1px solid #1E2A40",
+          borderRadius: 12,
+          padding: "10px 16px",
+          animation: "fadeUp 0.3s ease both",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{
+              width: 30, height: 30, borderRadius: 8, background: "#6366F1",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 14, fontWeight: 800, color: "#fff",
+            }}>✦</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#E2E8F0", letterSpacing: "-0.3px" }}>
+                Placement SaaS
+              </div>
+              <div style={{ fontSize: 10, color: "#475569" }}>Overview · Dashboard</div>
             </div>
-            <button
-              style={s.btnLogout}
-              onClick={handleLogout}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#fee2e2"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#fff"; }}
-            >
-              ↩ Logout
-            </button>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* system health pill — clickable */}
+            <div ref={healthRef} onClick={() => { setHealthOpen(o => !o); setLogsOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 6,
+              padding: "5px 12px", borderRadius: 99,
+              background: isOperational ? "#052E16" : "#1C1400",
+              border: `1px solid ${isOperational ? "#14532D" : "#292524"}`,
+              fontSize: 11, fontWeight: 600,
+              color: isOperational ? "#4ADE80" : "#FBBF24",
+              cursor: "pointer", transition: "all 0.15s",
+            }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: "50%",
+                background: isOperational ? "#4ADE80" : "#FBBF24",
+                boxShadow: `0 0 5px ${isOperational ? "#4ADE80" : "#FBBF24"}`,
+              }} />
+              {isOperational ? "Operational" : "Setup required"}
+              <span style={{ fontSize: 9, opacity: 0.6 }}>▾</span>
+            </div>
+
+            {/* Logout */}
+            <LogoutBtn onClick={handleLogout} />
           </div>
         </div>
 
-        {/* ── KPI cards ── */}
-        <div style={s.sectionLabel}>At a glance</div>
-        <div style={s.kpiGrid}>
+        {/* ── Row 2: KPI cards ── */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 10,
+          animation: "fadeUp 0.35s ease 0.05s both",
+        }}>
           {kpis.map((k, i) => (
-            <div
-              key={i} style={s.kpiCard}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
-                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-                (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
-              }}
-            >
-              <div style={{ ...s.kpiAccent, background: kpiAccents[i] }} />
-              <div style={s.kpiIcon}>{k.icon}</div>
-              <div style={s.kpiLabel}>{k.label}</div>
-              <div style={s.kpiSub}>{k.sub}</div>
-              <div style={s.kpiVal}>{k.value.toLocaleString()}</div>
-            </div>
+            <KpiCard key={i} {...k} delay={i * 60} />
           ))}
         </div>
 
-        {/* ── health + quick actions ── */}
-        <div style={s.twoCol} className="two-col-grid">
+        {/* ── Row 3: Quick actions + Activity + Health bars ── */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1.6fr 1fr",
+          gap: 10,
+          animation: "fadeUp 0.35s ease 0.1s both",
+        }}>
 
-          {/* system health */}
-          <div style={s.card}>
-            <div style={s.cardTitle}>
-              System health
-              <span style={s.cardTitleMeta}>{total} integrations</span>
-            </div>
-            <div style={s.healthScoreRow}>
-              <div style={s.healthNum}>{healthScore}</div>
-              <div style={s.healthPct}>%</div>
-            </div>
-            <div style={s.healthBarWrap}>
-              <div style={{ ...s.healthBarFill, width: `${healthScore}%` }} />
-            </div>
-            {INTEGRATIONS_META.map(({ key, name, icon }) => {
-              const connected = getStatus(key);
-              return (
-                <div key={key} style={s.chip}>
-                  <span style={s.chipName}><span>{icon}</span> {name}</span>
-                  <span style={connected ? s.chipActive : s.chipOffline}>
-                    {connected ? "Active" : "Offline"}
-                  </span>
-                </div>
-              );
-            })}
-            <button
-              style={s.btnManage}
-              onClick={() => navigate("/integrations")}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(99,102,241,0.07)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-            >
-              ⚙ Manage integrations
-            </button>
-          </div>
-
-          {/* quick actions */}
-          <div style={s.card}>
-            <div style={s.cardTitle}>Quick actions</div>
-            <div style={s.actionsGrid}>
+          {/* Quick actions */}
+          <div style={{
+            background: "#172033",
+            border: "1px solid #1E2A40",
+            borderRadius: 12,
+            padding: "12px",
+          }}>
+            <div style={{
+              fontSize: 10, fontWeight: 700, color: "#475569",
+              letterSpacing: "0.07em", textTransform: "uppercase",
+              marginBottom: 10,
+            }}>Quick actions</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6 }}>
               {QUICK_ACTIONS.map((a, i) => (
-                <button
-                  key={i} style={s.actionBtn}
-                  onClick={() => navigate(a.path)}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.background = "#fff";
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "#d1d5db";
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)";
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.background = "#f9fafb";
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb";
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
-                  }}
-                >
-                  <div style={s.actionIcon}>{a.icon}</div>
-                  <span style={s.actionLabel}>{a.label}</span>
-                  <span style={s.actionDesc}>{a.desc}</span>
-                </button>
+                <ActionBtn key={i} {...a} onClick={() => navigate(a.path)} />
               ))}
             </div>
           </div>
-        </div>
 
-        {/* ── recent email activity ── */}
-        <div style={{ ...s.card, marginBottom: 20 }}>
-          <div style={s.cardTitle}>
-            Recent email activity
-            <span style={s.cardTitleMeta}>Last 5 campaigns</span>
-          </div>
+          {/* Recent logs — compact, click to expand */}
+          <div style={{
+            background: "#172033",
+            border: "1px solid #1E2A40",
+            borderRadius: 12,
+            overflow: "hidden",
+          }}>
+            <div
+              ref={logsRef}
+              onClick={() => { setLogsOpen(o => !o); setHealthOpen(false);  }}
+              style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "10px 14px",
+                borderBottom: logsOpen ? "1px solid #1E293B" : "none",
+                cursor: "pointer",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#1A2744")}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+            >
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#CBD5E1" }}>
+                📨 Recent email activity
+              </span>
+              <span style={{ fontSize: 10, color: "#475569" }}>
+                {data?.recentLogs?.length ?? 0} logs · click to view ▾
+              </span>
+            </div>
 
-          {data?.recentLogs && data.recentLogs.length > 0 ? (
-            <div style={s.tableWrap}>
-              <table style={s.table}>
-                <thead>
-                  <tr>
-                    {["Company", "Recipients", "Status", "Date"].map(h => (
-                      <th key={h} style={s.th}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
+            {/* Mini preview — last 2 rows always visible */}
+            {data?.recentLogs && data.recentLogs.length > 0 ? (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                 <tbody>
-                  {data.recentLogs.slice(0, 5).map(log => (
-                    <tr
-                      key={log.id}
-                      onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = "#f9fafb"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}
-                    >
-                      <td style={{ ...s.td, fontWeight: 600 }}>{log.company}</td>
-                      <td style={s.td}>{log.recipients_count.toLocaleString()}</td>
-                      <td style={s.td}>{statusBadge(log.status)}</td>
-                      <td style={{ ...s.td, color: "#9ca3af" }}>
-                        {new Date(log.created_at).toLocaleDateString("en-US", {
-                          month: "short", day: "numeric",
-                          hour: "2-digit", minute: "2-digit",
-                        })}
-                      </td>
-                    </tr>
+                  {data.recentLogs.slice(0, 2).map(log => (
+                    <LogRow key={log.id} log={log} />
                   ))}
                 </tbody>
               </table>
-            </div>
-          ) : (
-            <div style={s.empty}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>📨</div>
-              No email activity yet
-            </div>
-          )}
-        </div>
-
-        {/* ── workspace summary ── */}
-        <div style={s.card}>
-          <div style={{ ...s.cardTitle, marginBottom: 16 }}>Workspace summary</div>
-          <div style={s.wsGrid} className="ws-grid">
-            {[
-              { label: "Total students",  value: data?.students    ?? 0 },
-              { label: "Active drafts",   value: data?.drafts      ?? 0 },
-              { label: "Emails sent",     value: data?.emails      ?? 0 },
-              { label: "Connected APIs",  value: connectedCount },
-            ].map((item, i) => (
-              <div key={i} style={s.wsItem}>
-                <div style={s.wsNum}>{item.value.toLocaleString()}</div>
-                <div style={s.wsLabel}>{item.label}</div>
+            ) : (
+              <div style={{ padding: "16px 14px", fontSize: 11, color: "#475569", textAlign: "center" }}>
+                No activity yet
               </div>
-            ))}
+            )}
+          </div>
+
+          {/* Integrations health bar card */}
+          <div style={{
+            background: "#172033",
+            border: "1px solid #1E2A40",
+            borderRadius: 12,
+            padding: "12px 14px",
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#475569", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10 }}>
+              System health
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 4, marginBottom: 6 }}>
+              <span style={{
+                fontSize: 34, fontWeight: 800, letterSpacing: "-1.5px",
+                color: healthScore > 50 ? "#4ADE80" : "#FBBF24",
+                lineHeight: 1, fontVariantNumeric: "tabular-nums",
+              }}>{healthScore}</span>
+              <span style={{ fontSize: 14, color: "#475569", marginBottom: 3, fontWeight: 600 }}>%</span>
+            </div>
+            <div style={{ height: 4, borderRadius: 99, background: "#1E293B", marginBottom: 10, overflow: "hidden" }}>
+              <div style={{
+                height: "100%", borderRadius: 99,
+                background: healthScore > 50 ? "linear-gradient(90deg,#059669,#4ADE80)" : "linear-gradient(90deg,#D97706,#FBBF24)",
+                width: `${healthScore}%`, transition: "width 0.8s ease",
+              }} />
+            </div>
+            {INTEGRATIONS_META.map(({ key, name, icon }) => {
+              const on = getStatus(key);
+              return (
+                <div key={key} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  marginBottom: 5,
+                }}>
+                  <span style={{ fontSize: 11, color: "#94A3B8" }}>{icon} {name}</span>
+                  <span style={{
+                    fontSize: 8, fontWeight: 700, padding: "1px 7px", borderRadius: 99,
+                    background: on ? "#052E16" : "#1C1917",
+                    color: on ? "#4ADE80" : "#57534E",
+                    border: `1px solid ${on ? "#14532D" : "#292524"}`,
+                  }}>{on ? "●" : "○"}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
+        {/* ── Row 4: Workspace mini tiles ── */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4,1fr)",
+          gap: 10,
+          animation: "fadeUp 0.35s ease 0.15s both",
+        }}>
+          {[
+            { label: "Total students", value: data?.students ?? 0, color: "#6366F1", sub: "registered" },
+            { label: "Active drafts",  value: data?.drafts   ?? 0, color: "#8B5CF6", sub: "generated"  },
+            { label: "Emails sent",    value: data?.emails   ?? 0, color: "#06B6D4", sub: "delivered"  },
+            { label: "Connected APIs", value: connectedCount,       color: "#10B981", sub: `of ${total}`},
+          ].map((item, i) => (
+            <WorkspaceTile key={i} {...item} />
+          ))}
+        </div>
+
       </div>
+
+      {/* ── System health pop-up ── */}
+      <PopCard open={healthOpen} onClose={() => setHealthOpen(false)} title="System health" anchorRef={healthRef}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, marginBottom: 10 }}>
+          <span style={{ fontSize: 38, fontWeight: 800, color: healthScore > 50 ? "#4ADE80" : "#FBBF24", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{healthScore}</span>
+          <span style={{ fontSize: 16, color: "#475569", marginBottom: 4 }}>%</span>
+        </div>
+        <div style={{ height: 4, borderRadius: 99, background: "#0F172A", marginBottom: 12, overflow: "hidden" }}>
+          <div style={{
+            height: "100%", borderRadius: 99,
+            background: healthScore > 50 ? "linear-gradient(90deg,#059669,#4ADE80)" : "linear-gradient(90deg,#D97706,#FBBF24)",
+            width: `${healthScore}%`, transition: "width 0.8s ease",
+          }} />
+        </div>
+        {INTEGRATIONS_META.map(({ key, name, icon }) => (
+          <IntChip key={key} name={name} icon={icon} connected={getStatus(key)} />
+        ))}
+        <button onClick={() => { setHealthOpen(false); navigate("/integrations"); }} style={{
+          width: "100%", marginTop: 10, padding: "8px 0", borderRadius: 8,
+          background: "#059669", color: "#fff", border: "none",
+          fontSize: 12, fontWeight: 600, cursor: "pointer",
+        }}>Manage integrations →</button>
+      </PopCard>
+
+      {/* ── Logs pop-up ── */}
+      <PopCard open={logsOpen} onClose={() => setLogsOpen(false)} title="Email activity" anchorRef={logsRef}>
+        {data?.recentLogs && data.recentLogs.length > 0 ? (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+            <thead>
+              <tr>
+                {["Company", "Rcpts", "Status", "Date"].map(h => (
+                  <th key={h} style={{ textAlign: "left", fontSize: 9, fontWeight: 700, color: "#475569", padding: "0 8px 8px", letterSpacing: "0.06em", textTransform: "uppercase" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.recentLogs.slice(0, 5).map(log => <LogRow key={log.id} log={log} />)}
+            </tbody>
+          </table>
+        ) : (
+          <div style={{ textAlign: "center", padding: "20px 0", color: "#475569", fontSize: 12 }}>No logs yet</div>
+        )}
+        <button onClick={() => { setLogsOpen(false); navigate("/logs"); }} style={{
+          width: "100%", marginTop: 10, padding: "8px 0", borderRadius: 8,
+          background: "#0891B2", color: "#fff", border: "none",
+          fontSize: 12, fontWeight: 600, cursor: "pointer",
+        }}>View all logs →</button>
+      </PopCard>
+
     </DashboardLayout>
+  );
+}
+
+function WorkspaceTile({ label, value, color, sub }: { label: string; value: number; color: string; sub: string }) {
+  const [h, setH] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
+      style={{
+        background: h ? "#1A2744" : "#172033",
+        border: `1px solid ${h ? color + "44" : "#1E2A40"}`,
+        borderRadius: 10,
+        padding: "10px 14px",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        cursor: "default",
+        transition: "all 0.18s",
+        transform: h ? "translateY(-2px)" : "none",
+      }}
+    >
+      <div style={{
+        width: 36, height: 36, borderRadius: 9,
+        background: color + "18",
+        border: `1px solid ${color}33`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 17, fontWeight: 800, color, fontVariantNumeric: "tabular-nums" }}>
+          {value}
+        </span>
+      </div>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#CBD5E1" }}>{label}</div>
+        <div style={{ fontSize: 10, color: "#475569" }}>{sub}</div>
+      </div>
+    </div>
+  );
+}
+
+function LogoutBtn({ onClick }: { onClick: () => void }) {
+  const [h, setH] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
+      style={{
+        padding: "5px 12px", borderRadius: 8,
+        border: `1px solid ${h ? "#7F1D1D" : "#1E293B"}`,
+        background: h ? "#1C0A0A" : "transparent",
+        color: h ? "#F87171" : "#64748B",
+        fontSize: 12, fontWeight: 500, cursor: "pointer",
+        display: "flex", alignItems: "center", gap: 5,
+        transition: "all 0.15s",
+      }}
+    >
+      ↩ Logout
+    </button>
   );
 }

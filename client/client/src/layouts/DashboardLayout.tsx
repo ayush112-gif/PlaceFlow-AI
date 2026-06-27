@@ -7,13 +7,13 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div style={{ display: "flex" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#F8FAFC" }}>
       <Sidebar />
 
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <Topbar />
 
-        <div style={{ padding: "20px" }}>
+        <div style={{ padding: "24px 28px", flex: 1, overflowY: "auto" }}>
           {children}
         </div>
       </div>
